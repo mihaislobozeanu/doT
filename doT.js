@@ -2,48 +2,47 @@
 // 2011-2014, Laura Doktorova, https://github.com/olado/doT
 // Licensed under the MIT license.
 /**
- * Modifyed by Paul Mihailescu https://github.com/Paul1324, on 19.07.2024
- * added support for asyncronous templates
- * created the templateAsync function that returns an async function for the processed template
- * extracted the common code of templateAsync and template into processTemplate
- * created resolveDefsAsync for asyncronouse defines
+ * Modified by Paul Mihailescu https://github.com/Paul1324, on 19.07.2024
+ * 		* added support for asynchronous templates
+ * 		* created the templateAsync function that returns an async function for the processed template
+ * 		* extracted the common code of templateAsync and template into processTemplate
+ * 		* created resolveDefsAsync for asynchronous defines
  */
 
-function replaceAsync(str, re, callback) {
-	str = String(str);
-	const parts = [];
-	let i = 0;
-	if (Object.prototype.toString.call(re) == "[object RegExp]") {
-		if (re.global)
-			re.lastIndex = i;
-		let m;
-		while ((m = re.exec(str)) !== null) {
-			const args = m.concat([m.index, m.input]);
-			parts.push(str.slice(i, m.index), callback.apply(null, args));
-			i = re.lastIndex;
-			if (!re.global)
-				break;
-			if (m[0].length == 0)
-				re.lastIndex++;
+const AsyncFunction = async function () { }.constructor,
+	replaceAsync = function (str, re, callback) {
+		str = String(str);
+		const parts = [];
+		let i = 0;
+		if (Object.prototype.toString.call(re) == "[object RegExp]") {
+			if (re.global)
+				re.lastIndex = i;
+			let m;
+			while ((m = re.exec(str)) !== null) {
+				const args = m.concat([m.index, m.input]);
+				parts.push(str.slice(i, m.index), callback.apply(null, args));
+				i = re.lastIndex;
+				if (!re.global)
+					break;
+				if (m[0].length == 0)
+					re.lastIndex++;
+			}
+		} else {
+			re = String(re);
+			i = str.indexOf(re);
+			parts.push(str.slice(0, i), callback.apply(null, [re, i, str]));
+			i += re.length;
 		}
-	} else {
-		re = String(re);
-		i = str.indexOf(re);
-		parts.push(str.slice(0, i), callback.apply(null, [re, i, str]));
-		i += re.length;
-	}
-	parts.push(str.slice(i));
-	return Promise.all(parts).then(function (strings) {
-		return strings.join("");
-	});
-}
-
-const AsyncFunction = async function () {}.constructor;
+		parts.push(str.slice(i));
+		return Promise.all(parts).then(function (strings) {
+			return strings.join("");
+		});
+	};
 
 (function () {
 	"use strict";
 
-	var doT = {
+	const doT = {
 		name: "doT",
 		version: "1.1.1",
 		templateSettings: {
@@ -65,10 +64,11 @@ const AsyncFunction = async function () {}.constructor;
 		template: undefined, //fn, compile template
 		compile: undefined, //fn, for express
 		log: true
-	}, _globals;
+	};
+	let _globals;
 
 	doT.encodeHTMLSource = function (doNotSkipEncoded) {
-		var encodeHTMLRules = { "&": "&#38;", "<": "&#60;", ">": "&#62;", '"': "&#34;", "'": "&#39;", "/": "&#47;" },
+		const encodeHTMLRules = { "&": "&#38;", "<": "&#60;", ">": "&#62;", '"': "&#34;", "'": "&#39;", "/": "&#47;" },
 			matchHTML = doNotSkipEncoded ? /[&<>"'\/]/g : /&(?!#?\w+;)|<|>|"|'|\//g;
 		return function (code) {
 			return code ? code.toString().replace(matchHTML, function (m) { return encodeHTMLRules[m] || m; }) : "";
@@ -86,10 +86,11 @@ const AsyncFunction = async function () {}.constructor;
 		_globals.doT = doT;
 	}
 
-	var startend = {
-		append: { start: "'+(", end: ")+'", startencode: "'+encodeHTML(" },
-		split: { start: "';out+=(", end: ");out+='", startencode: "';out+=encodeHTML(" }
-	}, skip = /$^/;
+	const skip = /$^/,
+		startend = {
+			append: { start: "'+(", end: ")+'", startencode: "'+encodeHTML(" },
+			split: { start: "';out+=(", end: ");out+='", startencode: "';out+=encodeHTML(" }
+		};
 
 	function processDefine(code, assign, value, def, c) {
 		if (code.indexOf("def.") === 0) {
@@ -163,6 +164,7 @@ const AsyncFunction = async function () {}.constructor;
 	function processTemplate(str, c) {
 		const cse = c.append ? startend.append : startend.split;
 		let needhtmlencode, sid = 0, indv;
+		c.doNotSkipEncoded = c.doNotSkipEncoded === true;
 
 		str = ("var out='" + (c.strip ? str.replace(/(^|\r|\n)\t* +| +\t*(\r|\n|$)/g, " ")
 			.replace(/\r|\n|\t|\/\*[\s\S]*?\*\//g, "") : str)
