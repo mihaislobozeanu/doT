@@ -2,7 +2,7 @@
 // 2011-2014, Laura Doktorova, https://github.com/olado/doT
 // Licensed under the MIT license.
 /**
- * Modified by Paul Mihailescu https://github.com/Paul1324, on 19.07.2024
+ * Modified by Paul Mihailescu https://github.com/Paul1324, on 2024.07.19
  * 		* added support for asynchronous templates
  * 		* created the templateAsync function that returns an async function for the processed template
  * 		* extracted the common code of templateAsync and template into processTemplate
@@ -10,7 +10,7 @@
  */
 
 const AsyncFunction = async function () { }.constructor,
-	replaceAsync = function (str, re, callback) {
+	replaceAsync = async function (str, re, callback) {
 		str = String(str);
 		const parts = [];
 		let i = 0;
@@ -34,9 +34,8 @@ const AsyncFunction = async function () { }.constructor,
 			i += re.length;
 		}
 		parts.push(str.slice(i));
-		return Promise.all(parts).then(function (strings) {
-			return strings.join("");
-		});
+		const strings = await Promise.all(parts);
+		return strings.join("");
 	};
 
 (function () {

@@ -1,5 +1,5 @@
 {
-  "name": "@eligo/dot",
+  "name": "@eligo-public/dot",
   "description": "Concise and fast javascript templating compatible with nodejs and other javascript environments",
   "keywords": [
     "template",
@@ -19,6 +19,10 @@
     "url": "git://github.com/mihaislobozeanu/doT.git"
   },
   "author": "Laura Doktorova <ldoktorova@gmail.com>",
+  "contributors": [
+    "Mihai Slobozeanu mihaislobozeanu@gmail.com",
+    "Paul Mihailescu"
+  ],
   "engines": {
     "node": ">=8.0.0"
   },
@@ -30,7 +34,7 @@
     "test-cov": "nyc npm run test-spec",
     "test": "npm run eslint && npm run test-cov",
     "bundle": "uglifyjs doT.js -o doT.min.js -c -m -b beautify=false,preamble='\"/*\\n\\tLaura Doktorova https://github.com/olado/doT\\n\\tPaul Mihailescu https://github.com/Paul1324\\n*/\"'",
-    "prepublish": "npm run bundle"
+    "prepublishOnly": "npm run bundle"
   },
   "dependencies": {},
   "devDependencies": {
@@ -58,6 +62,7 @@
     "url": "https://github.com/mihaislobozeanu/doT/issues"
   },
   "publishConfig": {
-    "registry": "https://nexus.dudes.local/repository/eligo/"
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   }
 }

@@ -1,3 +1,5 @@
+/* eslint-disable no-empty */
+/* eslint-disable no-undef */
 'use strict';
 
 var assert = require('assert');
@@ -5,22 +7,22 @@ var doT = require('..');
 var fs = require('fs');
 
 
-describe('doT.process', function() {
-  beforeEach(function() {
+describe('doT.process', function () {
+  beforeEach(function () {
     removeCompiledTemplateFiles();
   });
 
-  afterEach(function() {
+  afterEach(function () {
     removeCompiledTemplateFiles();
   });
 
   function removeCompiledTemplateFiles() {
-    try { fs.unlinkSync('./test/templates/test.js'); } catch(e) {}
+    try { fs.unlinkSync('./test/templates/test.js'); } catch (e) { }
   }
 
-  it('should compile all templates in folder', function() {
-    const templates = doT.process({path: './test/templates'});
-    var str = templates.test({data: 2});
+  it('should compile all templates in folder', function () {
+    const templates = doT.process({ path: './test/templates' });
+    var str = templates.test({ data: 2 });
     assert.equal(str, '21');
 
     var js = fs.statSync('./test/templates/test.js');
@@ -34,16 +36,16 @@ describe('doT.process', function() {
     // assert.equal(str, '21');
   });
 
-  
-	it('should ignore varname with polluted object prototype', function() {
+
+  it('should ignore varname with polluted object prototype', function () {
     var currentLog = console.log;
     console.log = log;
     var logged;
-    
-    Object.prototype.templateSettings = {varname: 'it=(console.log("executed"),{})'};
+
+    Object.prototype.templateSettings = { varname: 'it=(console.log("executed"),{})' };
 
     try {
-      const templates = doT.process({path: './test/templates'});
+      const templates = doT.process({ path: './test/templates' });
       assert.notEqual(logged, 'executed');
       // injected code can only be executed if undefined is passed to template function
       templates.test();
@@ -51,7 +53,7 @@ describe('doT.process', function() {
     } finally {
       console.log = currentLog;
     }
-    
+
     function log(str) {
       logged = str;
     }
