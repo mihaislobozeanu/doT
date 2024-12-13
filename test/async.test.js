@@ -50,11 +50,11 @@ describe('doT Async', function () {
         it('should support async/await inside interpolate', async function () {
             await testAsync([
                 `First async executed is {{=await (async () => {
-                    await new Promise(resolve => setTimeout(resolve, 0));
-                    return 'successful';
+                    const result = await new Promise(resolve => setTimeout(() => resolve('successful'), 0));
+                    return result || 'unsuccessful';
                 })()}};Second async executed is {{=await (async () => {
-                    await new Promise(resolve => setTimeout(resolve, 0));
-                    return 'true';
+                    const result = await new Promise(resolve => setTimeout(() => resolve('true'), 0));
+                    return result || 'false';
                 })()}}`
             ], {}, 'First async executed is successful;Second async executed is true');
         });

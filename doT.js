@@ -9,35 +9,6 @@
  * 		* created resolveDefsAsync for asynchronous defines
  */
 
-const AsyncFunction = async function () { }.constructor,
-	replaceAsync = async function (str, re, callback) {
-		str = String(str);
-		const parts = [];
-		let i = 0;
-		if (Object.prototype.toString.call(re) == "[object RegExp]") {
-			if (re.global)
-				re.lastIndex = i;
-			let m;
-			while ((m = re.exec(str)) !== null) {
-				const args = m.concat([m.index, m.input]);
-				parts.push(str.slice(i, m.index), callback.apply(null, args));
-				i = re.lastIndex;
-				if (!re.global)
-					break;
-				if (m[0].length == 0)
-					re.lastIndex++;
-			}
-		} else {
-			re = String(re);
-			i = str.indexOf(re);
-			parts.push(str.slice(0, i), callback.apply(null, [re, i, str]));
-			i += re.length;
-		}
-		parts.push(str.slice(i));
-		const strings = await Promise.all(parts);
-		return strings.join("");
-	};
-
 (function () {
 	"use strict";
 
@@ -60,10 +31,41 @@ const AsyncFunction = async function () { }.constructor,
 			selfcontained: false,
 			doNotSkipEncoded: false
 		},
+		AsyncFunction: async function () { }.constructor,
 		template: undefined, //fn, compile template
 		compile: undefined, //fn, for express
 		log: true
 	};
+
+	const
+		replaceAsync = function (str, re, callback) {
+			str = String(str);
+			const parts = [];
+			let i = 0;
+			if (Object.prototype.toString.call(re) == "[object RegExp]") {
+				if (re.global)
+					re.lastIndex = i;
+				let m;
+				while ((m = re.exec(str)) !== null) {
+					const args = m.concat([m.index, m.input]);
+					parts.push(str.slice(i, m.index), callback.apply(null, args));
+					i = re.lastIndex;
+					if (!re.global)
+						break;
+					if (m[0].length == 0)
+						re.lastIndex++;
+				}
+			} else {
+				re = String(re);
+				i = str.indexOf(re);
+				parts.push(str.slice(0, i), callback.apply(null, [re, i, str]));
+				i += re.length;
+			}
+			parts.push(str.slice(i));
+			return Promise.all(parts)
+				.then((strings) => strings.join(""));
+		};
+
 	let _globals;
 
 	doT.encodeHTMLSource = function (doNotSkipEncoded) {
@@ -136,22 +138,20 @@ const AsyncFunction = async function () { }.constructor,
 			});
 	}
 
-	async function resolveDefsAsync(c, block, def) {
+	function resolveDefsAsync(c, block, def) {
 		let result = (typeof block === "string") ? block : block.toString();
 
-		result = await replaceAsync(result, c.define || skip, async (m, code, assign, value) => {
+		result = replaceAsync(result, c.define || skip, (m, code, assign, value) => {
 			let processResult = processDefine(code, assign, value, def, c);
 			if (processResult) {
-				await new AsyncFunction("def", `def['${processResult.code}'] = ${processResult.value}`)(def);
+				return new doT.AsyncFunction("def", `def['${processResult.code}'] = ${processResult.value}`)(def);
 			}
 			return "";
-		});
-
-		result = await replaceAsync(result, c.use || skip, async (m, code) => {
+		}).then((result) => replaceAsync(result, c.use || skip, (m, code) => {
 			code = processUse(code, def, c);
-			const v = await new AsyncFunction("def", "return " + code)(def);
-			return v ? await resolveDefsAsync(c, v, def) : v;
-		});
+			return (new doT.AsyncFunction("def", "return " + code)(def))
+				.then((v) => v ? resolveDefsAsync(c, v, def) : v);
+		}));
 
 		return result;
 	}
@@ -217,17 +217,20 @@ const AsyncFunction = async function () { }.constructor,
 		}
 	};
 
-	doT.templateAsync = async function (tmpl, c, def) {
+	doT.templateAsync = function (tmpl, c, def) {
 		c = c || doT.templateSettings;
-		let str = (c.use || c.define) ? await resolveDefsAsync(c, tmpl, def || {}) : tmpl;
+		let str = (c.use || c.define) ? resolveDefsAsync(c, tmpl, def || {}) : tmpl;
 
-		str = processTemplate(str, c);
-		try {
-			return new AsyncFunction(c.varname, str);
-		} catch (e) {
-			if (typeof console !== "undefined") console.log("Could not create a template function: " + str);
-			throw e;
-		}
+		return Promise.resolve(str)
+			.then((str) => {
+				str = processTemplate(str, c);
+				try {
+					return new doT.AsyncFunction(c.varname, str);
+				} catch (e) {
+					if (typeof console !== "undefined") console.log("Could not create a template function: " + str);
+					throw e;
+				}
+			});
 	};
 
 	doT.compile = function (tmpl, def) {
